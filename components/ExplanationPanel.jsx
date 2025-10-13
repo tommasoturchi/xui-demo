@@ -52,7 +52,7 @@ function EventItem({ event, children }) {
         <div className="flex-1">
           <span className="opacity-60 mr-2">{formatTime(event.timestamp)}</span>
           <span className="font-semibold mr-2">[{event.component}]</span>
-          <span>{event.description}</span>
+          <span className="break-words whitespace-normal max-w-full inline-block align-top">{event.description}</span>
           {hint && <span className="opacity-70 ml-2">({hint})</span>}
         </div>
         <div className="shrink-0 flex items-center gap-1">

@@ -83,16 +83,22 @@ export function ExplanationProvider({ children }) {
     }
 
     function getAriaLabel(el) {
-      if (!el || typeof el.getAttribute !== "function") return null;
-      const ariaLabel = el.getAttribute("aria-label");
-      if (ariaLabel) return ariaLabel;
-      const labelledById = el.getAttribute("aria-labelledby");
-      if (labelledById && typeof document !== "undefined") {
-        const ref = document.getElementById(labelledById);
-        if (ref && typeof ref.textContent === "string") {
-          const text = ref.textContent.trim();
-          if (text) return text;
+      // Walk up a few ancestors to find a useful aria label
+      let cur = el;
+      for (let i = 0; i < 4 && cur; i++) {
+        if (typeof cur.getAttribute === "function") {
+          const ariaLabel = cur.getAttribute("aria-label");
+          if (ariaLabel) return ariaLabel;
+          const labelledById = cur.getAttribute("aria-labelledby");
+          if (labelledById && typeof document !== "undefined") {
+            const ref = document.getElementById(labelledById);
+            if (ref && typeof ref.textContent === "string") {
+              const text = ref.textContent.trim();
+              if (text) return text;
+            }
+          }
         }
+        cur = cur.parentElement;
       }
       return null;
     }
@@ -100,9 +106,9 @@ export function ExplanationProvider({ children }) {
     function getTextSnippet(el) {
       if (!el) return null;
       try {
-        const text = (el.textContent || "").trim().replace(/\s+/g, " ");
+        const text = (el.textContent || "").replace(/\s+/g, " ").trim();
         if (!text) return null;
-        return text.length > 60 ? `${text.slice(0, 57)}...` : text;
+        return text.length > 40 ? `${text.slice(0, 37)}...` : text;
       } catch {
         return null;
       }
