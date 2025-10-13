@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import InfoPopover from "@/components/InfoPopover.jsx";
 import TodoApp from "@/components/TodoApp.jsx";
 import ExplanationPanel from "@/components/ExplanationPanel.jsx";
