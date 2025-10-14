@@ -31,7 +31,7 @@ export default function TodoApp() {
 
   const addTask = (text, e) => {
     // XUI: record a syntactic log; Non‑XUI: omit this line
-    logEvent("Pressed Add", "TodoApp", { text }, "user", "syntactic");
+    logEvent("Pressed Add", "TodoApp", text, "user", "syntactic");
 
     const trimmed = (text || "").trim();
     if (!trimmed) return;
