@@ -117,6 +117,13 @@ export function ExplanationProvider({ children }) {
     const clickHandler = (e) => {
       try {
         const el = /** @type {HTMLElement} */ (e.target);
+        
+        // Check if the click is within the explanation panel
+        const explanationPanel = el.closest('[aria-label="Explanation log panel"]');
+        if (explanationPanel) {
+          return; // Skip logging interactions within the explanation panel
+        }
+        
         const targetSummary = summarizeTarget(el);
         const coords = { x: e.clientX ?? null, y: e.clientY ?? null };
         const ariaLabel = getAriaLabel(el);
@@ -131,6 +138,13 @@ export function ExplanationProvider({ children }) {
       try {
         const active = typeof document !== "undefined" ? document.activeElement : null;
         const el = /** @type {HTMLElement} */ (active || e.target);
+        
+        // Check if the key event is within the explanation panel
+        const explanationPanel = el.closest('[aria-label="Explanation log panel"]');
+        if (explanationPanel) {
+          return; // Skip logging interactions within the explanation panel
+        }
+        
         const targetSummary = summarizeTarget(el);
         const ariaLabel = getAriaLabel(el);
         const textSnippet = getTextSnippet(el);
