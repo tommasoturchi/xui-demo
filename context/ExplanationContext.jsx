@@ -114,15 +114,19 @@ export function ExplanationProvider({ children }) {
       }
     }
 
+    const isInsideExplainUI = (node) => {
+      if (!node || typeof node.closest !== "function") return false;
+      return (
+        node.closest('[aria-label="Explanation log panel"]') ||
+        node.closest('[data-explain-ui="explanation"]') ||
+        node.closest('[data-explain-ui="explain-handle"]')
+      );
+    };
+
     const clickHandler = (e) => {
       try {
         const el = /** @type {HTMLElement} */ (e.target);
-        
-        // Check if the click is within the explanation panel
-        const explanationPanel = el.closest('[aria-label="Explanation log panel"]');
-        if (explanationPanel) {
-          return; // Skip logging interactions within the explanation panel
-        }
+        if (isInsideExplainUI(el)) return; // ignore clicks on explanation UI
         
         const targetSummary = summarizeTarget(el);
         const coords = { x: e.clientX ?? null, y: e.clientY ?? null };
@@ -138,12 +142,7 @@ export function ExplanationProvider({ children }) {
       try {
         const active = typeof document !== "undefined" ? document.activeElement : null;
         const el = /** @type {HTMLElement} */ (active || e.target);
-        
-        // Check if the key event is within the explanation panel
-        const explanationPanel = el.closest('[aria-label="Explanation log panel"]');
-        if (explanationPanel) {
-          return; // Skip logging interactions within the explanation panel
-        }
+        if (isInsideExplainUI(el)) return; // ignore keys when focus is inside explanation UI
         
         const targetSummary = summarizeTarget(el);
         const ariaLabel = getAriaLabel(el);
