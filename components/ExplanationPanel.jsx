@@ -107,9 +107,10 @@ export default function ExplanationPanel() {
   }, [grouped, levelsEnabled, focusTaskId]);
 
   return (
-    <div className="fixed left-0 right-0 bottom-0" style={{ height: "60vh", zIndex: 30 }}>
+    <div className="fixed left-0 right-0 bottom-0" style={{ zIndex: 30 }}>
       <div
         className={`absolute inset-x-0 bottom-0 transition-transform duration-300 ${open ? "translate-y-0" : "translate-y-[calc(100%-6px)]"}`}
+        style={{ height: "60vh" }}
         data-explain-ui="explanation"
       >
         {/* Handle sits on the top edge of the sliding panel and moves with it */}
