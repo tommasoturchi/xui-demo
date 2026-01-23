@@ -1,7 +1,7 @@
 "use client";
 
 import InfoPopover from "@/components/InfoPopover.jsx";
-import TodoApp from "@/components/TodoApp.jsx";
+import ExplainableTodoApp from "@/components/ExplainableTodoApp.jsx";
 import ExplanationPanel from "@/components/ExplanationPanel.jsx";
 import { ExplanationProvider } from "@/context/ExplanationContext.jsx";
 
@@ -14,7 +14,7 @@ export default function XuiHome() {
             <h1 className="text-2xl font-bold">To‑Do (XUI)</h1>
             <InfoPopover />
           </div>
-          <TodoApp />
+          <ExplainableTodoApp />
         </div>
 
         <ExplanationPanel />

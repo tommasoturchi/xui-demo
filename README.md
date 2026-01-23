@@ -2,8 +2,8 @@
 
 This repo contains two variants of a simple To‑Do app:
 
-- Vanilla: plain UX, no explanations (default route `/`)
-- XUI: explainable UX with a bottom sliding log of actions and causes (`/xui`)
+- Vanilla: plain UX, no explanations (default route `/`, uses `TodoApp`)
+- XUI: explainable UX with a bottom sliding log of actions and causes (`/xui`, uses `ExplainableTodoApp`)
 
 The goal is to demonstrate how a small amount of instrumentation and global listeners can provide meaningful explanations of what happened, why it happened, and what can be redone.
 
@@ -27,7 +27,8 @@ npm run dev
 
 ## Key files
 
-- `components/TodoApp.jsx` – To‑Do UI and minimal XUI instrumentation
+- `components/TodoApp.jsx` – Vanilla To‑Do UI (no explanations)
+- `components/ExplainableTodoApp.jsx` – To‑Do UI with XUI instrumentation
 - `components/ExplanationPanel.jsx` – Sliding panel and log UI
 - `context/ExplanationContext.jsx` – Log store, global lexical listeners, filters
 - `hooks/useExplainableState.js` – State helper that emits syntactic/semantic events
@@ -40,7 +41,7 @@ npm run dev
 
 ## Compare vanilla vs XUI
 
-The vanilla app uses the same components but no panel or extra logging. The XUI variant adds the context provider and panel, and emits events. Compare the code comments in `TodoApp.jsx` where we note the non‑XUI alternatives.
+The vanilla app uses `TodoApp` with standard `useState` and no logging or explanations. The XUI variant wraps `ExplainableTodoApp` in `ExplanationProvider`, renders `ExplanationPanel`, and uses `useExplainableState` plus `logEvent` calls to emit events. Compare `TodoApp.jsx` and `ExplainableTodoApp.jsx` side‑by‑side to see the minimal changes needed to add explainability.
 
 ## Notes
 

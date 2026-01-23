@@ -1,6 +1,8 @@
  "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import useExplainableState from "@/hooks/useExplainableState.js";
+import { ExplanationContext } from "@/context/ExplanationContext.jsx";
 import { isNearDuplicate } from "@/lib/similarity.js";
 import {
   ArrowUp,
@@ -13,15 +15,24 @@ import {
   Square,
 } from "lucide-react";
 
-export default function TodoApp() {
-  // Standard React state - no explainability
-  const [tasks, setTasks] = useState([]);
+export default function ExplainableTodoApp() {
+  const { logEvent } = useContext(ExplanationContext);
+  // XUI: use explainable state to emit syntactic/semantic logs alongside updates
+  // Non‑XUI: replace with React's useState, e.g.
+  //   const [tasks, setTasks] = useState([]);
+  // Non‑XUI version would keep a single list with an `archived` flag too
+  const [tasks, setTasksWithExplain] = useExplainableState([], "TodoApp");
   const [view, setView] = useState("active"); // 'active' | 'archive'
   const [newText, setNewText] = useState("");
   const inputRef = useRef(null);
+  const addEnabledRef = useRef(false);
+  const emptyEnabledRef = useRef(false);
   const autoArchiveTimersRef = useRef(new Map());
 
   const addTask = (text, e) => {
+    // XUI: record a syntactic log; Non‑XUI: omit this line
+    logEvent("Pressed Add", "TodoApp", text, "user", "syntactic");
+
     const trimmed = (text || "").trim();
     if (!trimmed) return;
 
@@ -31,19 +42,34 @@ export default function TodoApp() {
       const wasArchived = !!match.archived;
       const previousText = match.text;
 
-      // Update existing task name if text changed
+      // User intent (semantic): the user tried to add a task that matches an existing one
+      logEvent(
+        "Add task (duplicate detected)",
+        "TodoApp",
+        { text: trimmed, matchedId: match.id },
+        "user",
+        "semantic"
+      );
+
+      // Auto (semantic): rename existing task to new text (only if changed)
       if (trimmed !== previousText) {
-        setTasks((prev) =>
-          prev.map((t) => (t.id === match.id ? { ...t, text: trimmed } : t))
+        setTasksWithExplain(
+          (prev) =>
+            prev.map((t) => (t.id === match.id ? { ...t, text: trimmed } : t)),
+          "Updated existing task name",
+          { id: match.id, previousText, newText: trimmed, auto: true }
         );
       }
 
-      // Unarchive if needed
+      // Auto (semantic): unarchive if needed
       if (wasArchived) {
-        setTasks((prev) =>
-          prev.map((t) =>
-            t.id === match.id ? { ...t, archived: false } : t
-          )
+        setTasksWithExplain(
+          (prev) =>
+            prev.map((t) =>
+              t.id === match.id ? { ...t, archived: false } : t
+            ),
+          "Unarchived task",
+          { id: match.id, auto: true }
         );
       }
 
@@ -57,7 +83,13 @@ export default function TodoApp() {
       completed: false,
       archived: false,
     };
-    setTasks((prev) => [newTask, ...prev]);
+    // XUI: state update emits syntactic + semantic logs via helper
+    // Non‑XUI: call setTasks([...]) with no logging
+    setTasksWithExplain(
+      (prev) => [newTask, ...prev],
+      `Added task: ${trimmed}`,
+      { task: newTask }
+    );
     setNewText("");
   };
 
@@ -66,19 +98,26 @@ export default function TodoApp() {
       t.id === id ? { ...t, completed: !t.completed } : t
     );
     const toggled = updated.find((t) => t.id === id);
-    setTasks(updated);
+    // XUI: logs the state change; Non‑XUI: setTasks(updated)
+    setTasksWithExplain(
+      updated,
+      toggled.completed ? "Marked task complete" : "Marked task incomplete",
+      { id }
+    );
 
     // Auto-archive after 10s if completed
     if (toggled.completed) {
       const timerId = setTimeout(() => {
-        archiveTask(id, { auto: true });
+        archiveTask(id, { auto: true, elapsedMs: 10000 });
       }, 10000);
       autoArchiveTimersRef.current.set(id, timerId);
+      // Scheduling is silent; we explain when the auto action actually occurs
     } else {
       const existing = autoArchiveTimersRef.current.get(id);
       if (existing) {
         clearTimeout(existing);
         autoArchiveTimersRef.current.delete(id);
+        // Silent: cancelling the timer doesn't need its own log entry
       }
     }
   };
@@ -96,7 +135,15 @@ export default function TodoApp() {
       }
     }
 
-    setTasks((prev) => prev.map((x) => (x.id === id ? { ...x, archived: true } : x)));
+    // XUI: mark item archived in-place; Non‑XUI: setTasks(prev => prev.map(...))
+    const archivedDesc = options.auto
+      ? "Auto-archived task after 10s"
+      : "Archived task";
+    setTasksWithExplain(
+      (prev) => prev.map((x) => (x.id === id ? { ...x, archived: true } : x)),
+      archivedDesc,
+      { id, auto: !!options.auto, elapsedMs: options.elapsedMs }
+    );
   };
 
   const restoreTask = (id, e) => {
@@ -110,7 +157,12 @@ export default function TodoApp() {
       autoArchiveTimersRef.current.delete(id);
     }
 
-    setTasks((prev) => prev.map((x) => (x.id === id ? { ...x, archived: false } : x)));
+    // XUI: mark as not archived; Non‑XUI: setTasks(prev => prev.map(...))
+    setTasksWithExplain(
+      (prev) => prev.map((x) => (x.id === id ? { ...x, archived: false } : x)),
+      "Restored task",
+      { id }
+    );
   };
 
   const deleteTask = (id, e) => {
@@ -121,7 +173,12 @@ export default function TodoApp() {
       autoArchiveTimersRef.current.delete(id);
     }
 
-    setTasks((prev) => prev.filter((x) => x.id !== id));
+    // XUI: remove from list when permanently deleting from archive; Non‑XUI: similar
+    setTasksWithExplain(
+      (prev) => prev.filter((x) => x.id !== id),
+      "Deleted permanently",
+      { id }
+    );
   };
 
   const emptyArchive = (e) => {
@@ -131,7 +188,13 @@ export default function TodoApp() {
     }
     autoArchiveTimersRef.current.clear();
 
-    setTasks((prev) => prev.filter((t) => !t.archived));
+    // XUI: remove all archived tasks; Non‑XUI: setTasks(prev => prev.filter(!archived))
+    const count = tasks.filter((t) => t.archived).length;
+    setTasksWithExplain(
+      (prev) => prev.filter((t) => !t.archived),
+      "Emptied archive",
+      { count }
+    );
   };
 
   const moveTask = (id, direction, e) => {
@@ -145,13 +208,32 @@ export default function TodoApp() {
     const arr = [...tasks];
     const [item] = arr.splice(index, 1);
     arr.splice(newIndex, 0, item);
-    setTasks(arr);
+    // XUI: emits logs; Non‑XUI: setTasks(arr)
+    setTasksWithExplain(arr, `Reordered task ${direction}`, {
+      id,
+      from: index,
+      to: newIndex,
+    });
   };
 
+  // Track archive count to enable/disable the Empty archive button and log syntactic changes
   const archivedCount = useMemo(
     () => tasks.filter((t) => t.archived).length,
     [tasks]
   );
+  useEffect(() => {
+    const enabled = archivedCount > 0;
+    if (enabled !== emptyEnabledRef.current) {
+      logEvent(
+        enabled ? "Enabled Empty archive" : "Disabled Empty archive",
+        "TodoApp",
+        { archivedCount },
+        "auto",
+        "syntactic"
+      );
+      emptyEnabledRef.current = enabled;
+    }
+  }, [archivedCount, logEvent]);
 
   const handleAddClick = (e) => {
     addTask(newText, e);
@@ -176,6 +258,17 @@ export default function TodoApp() {
           onChange={(e) => {
             const v = e.target.value;
             setNewText(v);
+            const enabled = v.trim().length > 0;
+            if (enabled !== addEnabledRef.current) {
+              logEvent(
+                enabled ? "Enabled Add button" : "Disabled Add button",
+                "TodoApp",
+                { length: v.trim().length },
+                "auto",
+                "syntactic"
+              );
+              addEnabledRef.current = enabled;
+            }
           }}
           className="flex-1 rounded border border-black/10 dark:border-white/20 px-3 py-2 bg-transparent"
         />
@@ -205,7 +298,7 @@ export default function TodoApp() {
           onClick={() => setView("archive")}
           className={`px-3 py-1 rounded ${
             view === "archive"
-              ? "bg-black/10 dark:bg-white/10"
+              ? "bg-black/10 dark:bg:white/10"
               : "border border-black/10 dark:border-white/20"
           }`}
           aria-label="Show archive"
@@ -290,14 +383,14 @@ export default function TodoApp() {
                 <div className="flex items-center gap-1">
                   <button
                     onClick={(e) => restoreTask(t.id, e)}
-                    className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/5"
+                    className="p-1 rounded hover:bg-black/5 dark:hover:bg:white/5"
                     aria-label="Restore"
                   >
                     <RotateCcw size={16} />
                   </button>
                   <button
                     onClick={(e) => deleteTask(t.id, e)}
-                    className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/5 text-red-600"
+                    className="p-1 rounded hover:bg-black/5 dark:hover:bg:white/5 text-red-600"
                     aria-label="Delete permanently"
                   >
                     <Trash2 size={16} />
@@ -310,3 +403,4 @@ export default function TodoApp() {
     </div>
   );
 }
+
