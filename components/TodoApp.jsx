@@ -84,9 +84,6 @@ export default function TodoApp() {
   };
 
   const archiveTask = (id, options = {}, e = null) => {
-    const t = tasks.find((x) => x.id === id);
-    if (!t) return;
-
     // Clear auto-archive timer if manually archiving
     if (!options.auto) {
       const existing = autoArchiveTimersRef.current.get(id);
@@ -96,7 +93,11 @@ export default function TodoApp() {
       }
     }
 
-    setTasks((prev) => prev.map((x) => (x.id === id ? { ...x, archived: true } : x)));
+    setTasks((prev) => {
+      const t = prev.find((x) => x.id === id);
+      if (!t) return prev; // Task not found, return unchanged
+      return prev.map((x) => (x.id === id ? { ...x, archived: true } : x));
+    });
   };
 
   const restoreTask = (id, e) => {

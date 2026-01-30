@@ -123,9 +123,6 @@ export default function ExplainableTodoApp() {
   };
 
   const archiveTask = (id, options = {}, e = null) => {
-    const t = tasks.find((x) => x.id === id);
-    if (!t) return;
-
     // Clear auto-archive timer if manually archiving
     if (!options.auto) {
       const existing = autoArchiveTimersRef.current.get(id);
@@ -140,7 +137,11 @@ export default function ExplainableTodoApp() {
       ? "Auto-archived task after 10s"
       : "Archived task";
     setTasksWithExplain(
-      (prev) => prev.map((x) => (x.id === id ? { ...x, archived: true } : x)),
+      (prev) => {
+        const t = prev.find((x) => x.id === id);
+        if (!t) return prev; // Task not found, return unchanged
+        return prev.map((x) => (x.id === id ? { ...x, archived: true } : x));
+      },
       archivedDesc,
       { id, auto: !!options.auto, elapsedMs: options.elapsedMs }
     );
